@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,15 +52,7 @@ TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
-uint16_t buf_tr[64]={
-127,255,383,511,639,767,895,1023,
-1151,1279,1407,1535,1663,1791,1919,2047,
-2175,2303,2431,2559,2687,2815,2943,3071,
-3199,3327,3455,3583,3711,3839,3967,4095,
-3967,3839,3711,3583,3455,3327,3199,3071,
-2943,2815,2687,2559,2431,2303,2175,2047,
-1919,1791,1663,1535,1407,1279,1151,1023,
-895,767,639,511,383,255,127,0};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,15 +62,16 @@ static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM4_Init(void);
-static void MX_DMA_Init(void);
 static void MX_DAC_Init(void);
+static void MX_DMA_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+#define N 3216
+static uint16_t sine[N * 4];
 /* USER CODE END 0 */
 
 /**
@@ -114,8 +107,8 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM6_Init();
   MX_TIM4_Init();
-  MX_DMA_Init();
   MX_DAC_Init();
+  MX_DMA_Init();
   /* USER CODE BEGIN 2 */
   /* Used
    * http://narodstream.ru/stm-urok-27-hal-dac/
@@ -123,9 +116,17 @@ int main(void)
    * http://narodstream.ru/stm-urok-29-hal-dac-triangle-dma/
    * https://www.unitjuggler.com/%D0%BF%D0%B5%D1%80%D0%B5%D0%B2%D0%BE%D0%B4-frequency-%D0%B8%D0%B7-Hz-%D0%B2-ms%28p%29.html?val=20
    */
+  const float A = 2047;
+  const float PI = 3.1415927;
+  for(int i = 0; i < N * 4; i++) {
+    sine[i] = 2048 + (int16_t)(round(A * sin((i * PI) / (N * 2.0))));
+  }
   //HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+  //HAL_TIM_Base_Start(&htim6);
   HAL_TIM_Base_Start_IT(&htim6);
-  HAL_DAC_Start_DMA (&hdac, DAC_CHANNEL_1,(uint32_t*)buf_tr,64,DAC_ALIGN_12B_R);
+  //HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
+  HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
+  HAL_DAC_Start_DMA (&hdac, DAC_CHANNEL_1,(uint32_t*)sine, N * 4,DAC_ALIGN_12B_R);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
@@ -153,7 +154,7 @@ int main(void)
 	    	break;
 	    }
 	  }*/
-
+/*
       for(i=0;i<=524288;i++)
      {
              if(i<65536)        TIM4->CCR1=i;
@@ -168,6 +169,7 @@ int main(void)
              {
              }
      }
+     */
   }
   /* USER CODE END 3 */
 }
@@ -413,9 +415,9 @@ static void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 41999;
+  htim6.Init.Prescaler = 215;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 100;
+  htim6.Init.Period = 1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
